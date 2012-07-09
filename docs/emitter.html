@@ -1,0 +1,483 @@
+<!DOCTYPE html>  <html> <head>   <title>emitter.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>            <div id="jump_to">         Jump To &hellip;         <div id="jump_wrapper">           <div id="jump_page">                                           <a class="source" href="emitter.html">                 emitter.js               </a>                                           <a class="source" href="handlebars.html">                 handlebars.js               </a>                        </div>         </div>       </div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               emitter.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                            </td>             <td class="code">               <div class="highlight"><pre><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">rzr</span><span class="p">,</span> <span class="kc">undefined</span><span class="p">)</span> <span class="p">{</span>
+
+  <span class="kd">var</span> <span class="nx">isArray</span> <span class="o">=</span> <span class="nb">Array</span><span class="p">.</span><span class="nx">isArray</span> <span class="o">?</span> <span class="nb">Array</span><span class="p">.</span><span class="nx">isArray</span> <span class="o">:</span> <span class="kd">function</span> <span class="nx">_isArray</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">toString</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="o">===</span> <span class="s2">&quot;[object Array]&quot;</span><span class="p">;</span>
+  <span class="p">};</span>
+  <span class="kd">var</span> <span class="nx">defaultMaxListeners</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+
+  <span class="kd">function</span> <span class="nx">init</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_events</span> <span class="o">=</span> <span class="p">{};</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">configure</span><span class="p">(</span><span class="nx">conf</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">conf</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">conf</span><span class="p">.</span><span class="nx">delimiter</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">delimiter</span> <span class="o">=</span> <span class="nx">conf</span><span class="p">.</span><span class="nx">delimiter</span><span class="p">);</span>
+      <span class="nx">conf</span><span class="p">.</span><span class="nx">wildcard</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span> <span class="o">=</span> <span class="nx">conf</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">);</span>
+      <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">listenerTree</span> <span class="o">=</span> <span class="p">{};</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">EventEmitter</span><span class="p">(</span><span class="nx">conf</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_events</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="nx">configure</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">conf</span><span class="p">);</span>
+  <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>Attention, function return type now is array, always !
+It has zero elements if no any matches found and one or more
+elements (leafs) if there are matches</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="kd">function</span> <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">tree</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="p">[];</span>
+    <span class="p">}</span>
+    <span class="kd">var</span> <span class="nx">listeners</span><span class="o">=</span><span class="p">[],</span> <span class="nx">leaf</span><span class="p">,</span> <span class="nx">len</span><span class="p">,</span> <span class="nx">branch</span><span class="p">,</span> <span class="nx">xTree</span><span class="p">,</span> <span class="nx">xxTree</span><span class="p">,</span> <span class="nx">isolatedBranch</span><span class="p">,</span> <span class="nx">endReached</span><span class="p">,</span>
+        <span class="nx">typeLength</span> <span class="o">=</span> <span class="nx">type</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="nx">currentType</span> <span class="o">=</span> <span class="nx">type</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">nextType</span> <span class="o">=</span> <span class="nx">type</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">===</span> <span class="nx">typeLength</span> <span class="o">&amp;&amp;</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <p>If at the end of the event(s) list and the tree has listeners
+invoke those listeners.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span> <span class="o">===</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">handlers</span> <span class="o">&amp;&amp;</span> <span class="nx">handlers</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">);</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nx">tree</span><span class="p">];</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="nx">leaf</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">len</span> <span class="o">=</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">leaf</span> <span class="o">&lt;</span> <span class="nx">len</span><span class="p">;</span> <span class="nx">leaf</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">handlers</span> <span class="o">&amp;&amp;</span> <span class="nx">handlers</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">[</span><span class="nx">leaf</span><span class="p">]);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nx">tree</span><span class="p">];</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="nx">currentType</span> <span class="o">===</span> <span class="s1">&#39;*&#39;</span> <span class="o">||</span> <span class="nx">currentType</span> <span class="o">===</span> <span class="s1">&#39;**&#39;</span><span class="p">)</span> <span class="o">||</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">currentType</span><span class="p">])</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>If the event emitted is '*' at this part
+or there is a concrete match at this patch</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="nx">currentType</span> <span class="o">===</span> <span class="s1">&#39;*&#39;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="nx">branch</span> <span class="k">in</span> <span class="nx">tree</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="nx">branch</span> <span class="o">!==</span> <span class="s1">&#39;_listeners&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">branch</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">branch</span><span class="p">],</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">));</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">listeners</span><span class="p">;</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="nx">currentType</span> <span class="o">===</span> <span class="s1">&#39;**&#39;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">endReached</span> <span class="o">=</span> <span class="p">(</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span> <span class="o">===</span> <span class="nx">typeLength</span> <span class="o">||</span> <span class="p">(</span><span class="nx">i</span><span class="o">+</span><span class="mi">2</span> <span class="o">===</span> <span class="nx">typeLength</span> <span class="o">&amp;&amp;</span> <span class="nx">nextType</span> <span class="o">===</span> <span class="s1">&#39;*&#39;</span><span class="p">));</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">endReached</span> <span class="o">&amp;&amp;</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>The next element has a _listeners, add it to the handlers.</p>             </td>             <td class="code">               <div class="highlight"><pre>          <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">,</span> <span class="nx">typeLength</span><span class="p">));</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="nx">branch</span> <span class="k">in</span> <span class="nx">tree</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="nx">branch</span> <span class="o">!==</span> <span class="s1">&#39;_listeners&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">branch</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">branch</span> <span class="o">===</span> <span class="s1">&#39;*&#39;</span> <span class="o">||</span> <span class="nx">branch</span> <span class="o">===</span> <span class="s1">&#39;**&#39;</span><span class="p">)</span> <span class="p">{</span>
+              <span class="k">if</span><span class="p">(</span><span class="nx">tree</span><span class="p">[</span><span class="nx">branch</span><span class="p">].</span><span class="nx">_listeners</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nx">endReached</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">branch</span><span class="p">],</span> <span class="nx">typeLength</span><span class="p">));</span>
+              <span class="p">}</span>
+              <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">branch</span><span class="p">],</span> <span class="nx">i</span><span class="p">));</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="nx">branch</span> <span class="o">===</span> <span class="nx">nextType</span><span class="p">)</span> <span class="p">{</span>
+              <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">branch</span><span class="p">],</span> <span class="nx">i</span><span class="o">+</span><span class="mi">2</span><span class="p">));</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>No match on this one, shift into the tree but not in the type array.</p>             </td>             <td class="code">               <div class="highlight"><pre>              <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">branch</span><span class="p">],</span> <span class="nx">i</span><span class="p">));</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">listeners</span><span class="p">;</span>
+      <span class="p">}</span>
+
+      <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span><span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">currentType</span><span class="p">],</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">));</span>
+    <span class="p">}</span>
+
+    <span class="nx">xTree</span> <span class="o">=</span> <span class="nx">tree</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">xTree</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-7">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>               <p>If the listener tree will allow any match for this part,
+then recursively explore all branches of the tree</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">xTree</span><span class="p">,</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="nx">xxTree</span> <span class="o">=</span> <span class="nx">tree</span><span class="p">[</span><span class="s1">&#39;**&#39;</span><span class="p">];</span>
+    <span class="k">if</span><span class="p">(</span><span class="nx">xxTree</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span><span class="p">(</span><span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">typeLength</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">xxTree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-8">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-8">&#182;</a>               </div>               <p>If we have a listener on a '**', it will catch all, so add its handler.</p>             </td>             <td class="code">               <div class="highlight"><pre>          <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">xxTree</span><span class="p">,</span> <span class="nx">typeLength</span><span class="p">);</span>
+        <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <p>Build arrays of matching next branches and others.</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="k">for</span><span class="p">(</span><span class="nx">branch</span> <span class="k">in</span> <span class="nx">xxTree</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span><span class="p">(</span><span class="nx">branch</span> <span class="o">!==</span> <span class="s1">&#39;_listeners&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">xxTree</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">branch</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">branch</span> <span class="o">===</span> <span class="nx">nextType</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-10">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-10">&#182;</a>               </div>               <p>We know the next element will match, so jump twice.</p>             </td>             <td class="code">               <div class="highlight"><pre>              <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">xxTree</span><span class="p">[</span><span class="nx">branch</span><span class="p">],</span> <span class="nx">i</span><span class="o">+</span><span class="mi">2</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="nx">branch</span> <span class="o">===</span> <span class="nx">currentType</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-11">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-11">&#182;</a>               </div>               <p>Current node matches, move into the tree.</p>             </td>             <td class="code">               <div class="highlight"><pre>              <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">xxTree</span><span class="p">[</span><span class="nx">branch</span><span class="p">],</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+              <span class="nx">isolatedBranch</span> <span class="o">=</span> <span class="p">{};</span>
+              <span class="nx">isolatedBranch</span><span class="p">[</span><span class="nx">branch</span><span class="p">]</span> <span class="o">=</span> <span class="nx">xxTree</span><span class="p">[</span><span class="nx">branch</span><span class="p">];</span>
+              <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="p">{</span> <span class="s1">&#39;**&#39;</span><span class="o">:</span> <span class="nx">isolatedBranch</span> <span class="p">},</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="nx">xxTree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-12">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-12">&#182;</a>               </div>               <p>We have reached the end and still on a '**'</p>             </td>             <td class="code">               <div class="highlight"><pre>        <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">xxTree</span><span class="p">,</span> <span class="nx">typeLength</span><span class="p">);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="nx">xxTree</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">]</span> <span class="o">&amp;&amp;</span> <span class="nx">xxTree</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">].</span><span class="nx">_listeners</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">searchListenerTree</span><span class="p">(</span><span class="nx">handlers</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">xxTree</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">],</span> <span class="nx">typeLength</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">listeners</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">growListenerTree</span><span class="p">(</span><span class="nx">type</span><span class="p">,</span> <span class="nx">listener</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="nx">type</span> <span class="o">=</span> <span class="k">typeof</span> <span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span> <span class="o">?</span> <span class="nx">type</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">delimiter</span><span class="p">)</span> <span class="o">:</span> <span class="nx">type</span><span class="p">.</span><span class="nx">slice</span><span class="p">();</span></pre></div>             </td>           </tr>                               <tr id="section-13">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-13">&#182;</a>               </div>               <p>Looks for two consecutive '**', if so, don't add the event at all.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">len</span> <span class="o">=</span> <span class="nx">type</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">+</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="nx">len</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span><span class="p">(</span><span class="nx">type</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;**&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">type</span><span class="p">[</span><span class="nx">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;**&#39;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">tree</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">listenerTree</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">name</span> <span class="o">=</span> <span class="nx">type</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">tree</span><span class="p">[</span><span class="nx">name</span><span class="p">])</span> <span class="p">{</span>
+        <span class="nx">tree</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{};</span>
+      <span class="p">}</span>
+
+      <span class="nx">tree</span> <span class="o">=</span> <span class="nx">tree</span><span class="p">[</span><span class="nx">name</span><span class="p">];</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="nx">type</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span> <span class="o">=</span> <span class="nx">listener</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="k">typeof</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span> <span class="o">===</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span> <span class="o">=</span> <span class="p">[</span><span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">,</span> <span class="nx">listener</span><span class="p">];</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">))</span> <span class="p">{</span>
+
+          <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">listener</span><span class="p">);</span>
+
+          <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">.</span><span class="nx">warned</span><span class="p">)</span> <span class="p">{</span>
+
+            <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="nx">defaultMaxListeners</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">.</span><span class="nx">maxListeners</span> <span class="o">!==</span> <span class="s1">&#39;undefined&#39;</span><span class="p">)</span> <span class="p">{</span>
+              <span class="nx">m</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">.</span><span class="nx">maxListeners</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="nx">m</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="nx">m</span><span class="p">)</span> <span class="p">{</span>
+
+              <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">.</span><span class="nx">warned</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+              <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;(node) warning: possible EventEmitter memory &#39;</span> <span class="o">+</span>
+                            <span class="s1">&#39;leak detected. %d listeners added. &#39;</span> <span class="o">+</span>
+                            <span class="s1">&#39;Use emitter.setMaxListeners() to increase limit.&#39;</span><span class="p">,</span>
+                            <span class="nx">tree</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+              <span class="nx">console</span><span class="p">.</span><span class="nx">trace</span><span class="p">();</span>
+            <span class="p">}</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+      <span class="p">}</span>
+      <span class="nx">name</span> <span class="o">=</span> <span class="nx">type</span><span class="p">.</span><span class="nx">shift</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+  <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-14">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-14">&#182;</a>               </div>               <p>By default EventEmitters will print a warning if more than
+10 listeners are added to it. This is a useful default which
+helps finding memory leaks.</p>
+
+<p>Obviously not all Emitters should be limited to 10. This function allows
+that to be increased. Set to zero for unlimited.</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">delimiter</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span><span class="p">;</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">setMaxListeners</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">n</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_events</span> <span class="o">||</span> <span class="nx">init</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">.</span><span class="nx">maxListeners</span> <span class="o">=</span> <span class="nx">n</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">event</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">;</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">once</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">many</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="nx">fn</span><span class="p">);</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">many</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">ttl</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">fn</span> <span class="o">!==</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;many only accepts instances of Function&#39;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">listener</span><span class="p">()</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">--</span><span class="nx">ttl</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">self</span><span class="p">.</span><span class="nx">off</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">listener</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="nx">fn</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="nx">listener</span><span class="p">.</span><span class="nx">_origin</span> <span class="o">=</span> <span class="nx">fn</span><span class="p">;</span>
+
+    <span class="k">this</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">listener</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="nx">self</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">emit</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_events</span> <span class="o">||</span> <span class="nx">init</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+
+    <span class="kd">var</span> <span class="nx">type</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;newListener&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">.</span><span class="nx">newListener</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="kc">false</span><span class="p">;</span> <span class="p">}</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-15">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-15">&#182;</a>               </div>               <p>Loop through the <em>_all</em> functions and invoke them.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+      <span class="kd">var</span> <span class="nx">args</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Array</span><span class="p">(</span><span class="nx">l</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="nx">args</span><span class="p">[</span><span class="nx">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+      <span class="k">for</span> <span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">l</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">event</span> <span class="o">=</span> <span class="nx">type</span><span class="p">;</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">apply</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">args</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-16">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-16">&#182;</a>               </div>               <p>If there is no 'error' event listener then throw.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;error&#39;</span><span class="p">)</span> <span class="p">{</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_all</span> <span class="o">&amp;&amp;</span>
+        <span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">.</span><span class="nx">error</span> <span class="o">&amp;&amp;</span>
+        <span class="o">!</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">listenerTree</span><span class="p">.</span><span class="nx">error</span><span class="p">))</span> <span class="p">{</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">instanceof</span> <span class="nb">Error</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">throw</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span> <span class="c1">// Unhandled &#39;error&#39; event</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+          <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">&quot;Uncaught, unspecified &#39;error&#39; event.&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">handler</span><span class="p">;</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">handler</span> <span class="o">=</span> <span class="p">[];</span>
+      <span class="kd">var</span> <span class="nx">ns</span> <span class="o">=</span> <span class="k">typeof</span> <span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span> <span class="o">?</span> <span class="nx">type</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">delimiter</span><span class="p">)</span> <span class="o">:</span> <span class="nx">type</span><span class="p">.</span><span class="nx">slice</span><span class="p">();</span>
+      <span class="nx">searchListenerTree</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">handler</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">listenerTree</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+      <span class="nx">handler</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">];</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">handler</span> <span class="o">===</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">event</span> <span class="o">=</span> <span class="nx">type</span><span class="p">;</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">handler</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">switch</span> <span class="p">(</span><span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">case</span> <span class="mi">2</span><span class="o">:</span>
+            <span class="nx">handler</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+            <span class="k">break</span><span class="p">;</span>
+          <span class="k">case</span> <span class="mi">3</span><span class="o">:</span>
+            <span class="nx">handler</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nx">arguments</span><span class="p">[</span><span class="mi">2</span><span class="p">]);</span>
+            <span class="k">break</span><span class="p">;</span></pre></div>             </td>           </tr>                               <tr id="section-17">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-17">&#182;</a>               </div>               <p>slower</p>             </td>             <td class="code">               <div class="highlight"><pre>          <span class="k">default</span><span class="o">:</span>
+            <span class="kd">var</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+            <span class="kd">var</span> <span class="nx">args</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Array</span><span class="p">(</span><span class="nx">l</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+            <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="nx">args</span><span class="p">[</span><span class="nx">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+            <span class="nx">handler</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">args</span><span class="p">);</span>
+        <span class="p">}</span>
+      <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">handler</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+      <span class="kd">var</span> <span class="nx">args</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Array</span><span class="p">(</span><span class="nx">l</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="nx">args</span><span class="p">[</span><span class="nx">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nx">arguments</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+
+      <span class="kd">var</span> <span class="nx">listeners</span> <span class="o">=</span> <span class="nx">handler</span><span class="p">.</span><span class="nx">slice</span><span class="p">();</span>
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">listeners</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">event</span> <span class="o">=</span> <span class="nx">type</span><span class="p">;</span>
+        <span class="nx">listeners</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">apply</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">args</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="k">return</span> <span class="p">(</span><span class="nx">listeners</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">||</span> <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">;</span>
+    <span class="p">}</span>
+
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">on</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">type</span><span class="p">,</span> <span class="nx">listener</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">onAny</span><span class="p">(</span><span class="nx">type</span><span class="p">);</span>
+      <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">listener</span> <span class="o">!==</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;on only accepts instances of Function&#39;</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_events</span> <span class="o">||</span> <span class="nx">init</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-18">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-18">&#182;</a>               </div>               <p>To avoid recursion in the case that type == "newListeners"! Before
+adding it to the listeners, first emit "newListeners".</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;newListener&#39;</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">listener</span><span class="p">);</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">growListenerTree</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">listener</span><span class="p">);</span>
+      <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">])</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-19">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-19">&#182;</a>               </div>               <p>Optimize the case of one listener. Don't need the extra array object.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]</span> <span class="o">=</span> <span class="nx">listener</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="k">typeof</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]</span> <span class="o">===</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-20">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-20">&#182;</a>               </div>               <p>Adding the second element, need to change to array.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">],</span> <span class="nx">listener</span><span class="p">];</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">isArray</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]))</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-21">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-21">&#182;</a>               </div>               <p>If we've already got an array, just append.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">].</span><span class="nx">push</span><span class="p">(</span><span class="nx">listener</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-22">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-22">&#182;</a>               </div>               <p>Check for listener leak</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">].</span><span class="nx">warned</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="kd">var</span> <span class="nx">m</span> <span class="o">=</span> <span class="nx">defaultMaxListeners</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">.</span><span class="nx">maxListeners</span> <span class="o">!==</span> <span class="s1">&#39;undefined&#39;</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">m</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">.</span><span class="nx">maxListeners</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">m</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">].</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="nx">m</span><span class="p">)</span> <span class="p">{</span>
+
+          <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">].</span><span class="nx">warned</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+          <span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;(node) warning: possible EventEmitter memory &#39;</span> <span class="o">+</span>
+                        <span class="s1">&#39;leak detected. %d listeners added. &#39;</span> <span class="o">+</span>
+                        <span class="s1">&#39;Use emitter.setMaxListeners() to increase limit.&#39;</span><span class="p">,</span>
+                        <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">].</span><span class="nx">length</span><span class="p">);</span>
+          <span class="nx">console</span><span class="p">.</span><span class="nx">trace</span><span class="p">();</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">onAny</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">_all</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">fn</span> <span class="o">!==</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;onAny only accepts instances of Function&#39;</span><span class="p">);</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-23">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-23">&#182;</a>               </div>               <p>Add the function to the event listener collection.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">fn</span><span class="p">);</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">addListener</span> <span class="o">=</span> <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">on</span><span class="p">;</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">off</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">type</span><span class="p">,</span> <span class="nx">listener</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">listener</span> <span class="o">!==</span> <span class="s1">&#39;function&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s1">&#39;removeListener only takes instances of Function&#39;</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">handlers</span><span class="p">,</span><span class="nx">leafs</span><span class="o">=</span><span class="p">[];</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">ns</span> <span class="o">=</span> <span class="k">typeof</span> <span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span> <span class="o">?</span> <span class="nx">type</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">delimiter</span><span class="p">)</span> <span class="o">:</span> <span class="nx">type</span><span class="p">.</span><span class="nx">slice</span><span class="p">();</span>
+      <span class="nx">leafs</span> <span class="o">=</span> <span class="nx">searchListenerTree</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="kc">null</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">listenerTree</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span></pre></div>             </td>           </tr>                               <tr id="section-24">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-24">&#182;</a>               </div>               <p>does not use listeners(), so no side effect of creating _events[type]</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">])</span> <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+      <span class="nx">handlers</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">];</span>
+      <span class="nx">leafs</span><span class="p">.</span><span class="nx">push</span><span class="p">({</span><span class="nx">_listeners</span><span class="o">:</span><span class="nx">handlers</span><span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">iLeaf</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">iLeaf</span><span class="o">&lt;</span><span class="nx">leafs</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">iLeaf</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">leaf</span> <span class="o">=</span> <span class="nx">leafs</span><span class="p">[</span><span class="nx">iLeaf</span><span class="p">];</span>
+      <span class="nx">handlers</span> <span class="o">=</span> <span class="nx">leaf</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">;</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">handlers</span><span class="p">))</span> <span class="p">{</span>
+
+        <span class="kd">var</span> <span class="nx">position</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">length</span> <span class="o">=</span> <span class="nx">handlers</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="nx">handlers</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">===</span> <span class="nx">listener</span> <span class="o">||</span>
+            <span class="p">(</span><span class="nx">handlers</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">listener</span> <span class="o">&amp;&amp;</span> <span class="nx">handlers</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">listener</span> <span class="o">===</span> <span class="nx">listener</span><span class="p">)</span> <span class="o">||</span>
+            <span class="p">(</span><span class="nx">handlers</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">_origin</span> <span class="o">&amp;&amp;</span> <span class="nx">handlers</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">_origin</span> <span class="o">===</span> <span class="nx">listener</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">position</span> <span class="o">=</span> <span class="nx">i</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">position</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">leaf</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">position</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+          <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">].</span><span class="nx">splice</span><span class="p">(</span><span class="nx">position</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">handlers</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">delete</span> <span class="nx">leaf</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">;</span>
+          <span class="p">}</span>
+          <span class="k">else</span> <span class="p">{</span>
+            <span class="k">delete</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">];</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+      <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">handlers</span> <span class="o">===</span> <span class="nx">listener</span> <span class="o">||</span>
+        <span class="p">(</span><span class="nx">handlers</span><span class="p">.</span><span class="nx">listener</span> <span class="o">&amp;&amp;</span> <span class="nx">handlers</span><span class="p">.</span><span class="nx">listener</span> <span class="o">===</span> <span class="nx">listener</span><span class="p">)</span> <span class="o">||</span>
+        <span class="p">(</span><span class="nx">handlers</span><span class="p">.</span><span class="nx">_origin</span> <span class="o">&amp;&amp;</span> <span class="nx">handlers</span><span class="p">.</span><span class="nx">_origin</span> <span class="o">===</span> <span class="nx">listener</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">delete</span> <span class="nx">leaf</span><span class="p">.</span><span class="nx">_listeners</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">else</span> <span class="p">{</span>
+          <span class="k">delete</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">];</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">offAny</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">l</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">fns</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">fn</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_all</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">fns</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">;</span>
+      <span class="k">for</span><span class="p">(</span><span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">l</span> <span class="o">=</span> <span class="nx">fns</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">l</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">fn</span> <span class="o">===</span> <span class="nx">fns</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span> <span class="p">{</span>
+          <span class="nx">fns</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+          <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">_all</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">removeListener</span> <span class="o">=</span> <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">off</span><span class="p">;</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">removeAllListeners</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">arguments</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span> <span class="o">||</span> <span class="nx">init</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+      <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">ns</span> <span class="o">=</span> <span class="k">typeof</span> <span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span> <span class="o">?</span> <span class="nx">type</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">delimiter</span><span class="p">)</span> <span class="o">:</span> <span class="nx">type</span><span class="p">.</span><span class="nx">slice</span><span class="p">();</span>
+      <span class="kd">var</span> <span class="nx">leafs</span> <span class="o">=</span> <span class="nx">searchListenerTree</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="kc">null</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">listenerTree</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">iLeaf</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">iLeaf</span><span class="o">&lt;</span><span class="nx">leafs</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">iLeaf</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">leaf</span> <span class="o">=</span> <span class="nx">leafs</span><span class="p">[</span><span class="nx">iLeaf</span><span class="p">];</span>
+        <span class="nx">leaf</span><span class="p">.</span><span class="nx">_listeners</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">])</span> <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">listeners</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">wildcard</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">handlers</span> <span class="o">=</span> <span class="p">[];</span>
+      <span class="kd">var</span> <span class="nx">ns</span> <span class="o">=</span> <span class="k">typeof</span> <span class="nx">type</span> <span class="o">===</span> <span class="s1">&#39;string&#39;</span> <span class="o">?</span> <span class="nx">type</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">delimiter</span><span class="p">)</span> <span class="o">:</span> <span class="nx">type</span><span class="p">.</span><span class="nx">slice</span><span class="p">();</span>
+      <span class="nx">searchListenerTree</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="nx">handlers</span><span class="p">,</span> <span class="nx">ns</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">listenerTree</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+      <span class="k">return</span> <span class="nx">handlers</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">this</span><span class="p">.</span><span class="nx">_events</span> <span class="o">||</span> <span class="nx">init</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">])</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">isArray</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]))</span> <span class="p">{</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">]];</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_events</span><span class="p">[</span><span class="nx">type</span><span class="p">];</span>
+  <span class="p">};</span>
+
+  <span class="nx">EventEmitter</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">listenersAny</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_all</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="p">[];</span>
+    <span class="p">}</span>
+
+  <span class="p">};</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">define</span> <span class="o">===</span> <span class="s1">&#39;function&#39;</span> <span class="o">&amp;&amp;</span> <span class="nx">define</span><span class="p">.</span><span class="nx">amd</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">define</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">EventEmitter</span><span class="p">;</span>
+    <span class="p">});</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nx">rzr</span><span class="p">.</span><span class="nx">event</span> <span class="o">=</span> <span class="nx">EventEmitter</span><span class="p">;</span>
+  <span class="p">}</span>
+
+<span class="p">})(</span><span class="nb">window</span><span class="p">.</span><span class="nx">razor</span><span class="p">);</span>
+
+</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 

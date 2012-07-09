@@ -1,0 +1,550 @@
+<!DOCTYPE html>  <html> <head>   <title>handlebars.js</title>   <meta http-equiv="content-type" content="text/html; charset=UTF-8">   <link rel="stylesheet" media="all" href="docco.css" /> </head> <body>   <div id="container">     <div id="background"></div>            <div id="jump_to">         Jump To &hellip;         <div id="jump_wrapper">           <div id="jump_page">                                           <a class="source" href="emitter.html">                 emitter.js               </a>                                           <a class="source" href="handlebars.html">                 handlebars.js               </a>                        </div>         </div>       </div>          <table cellpadding="0" cellspacing="0">       <thead>         <tr>           <th class="docs">             <h1>               handlebars.js             </h1>           </th>           <th class="code">           </th>         </tr>       </thead>       <tbody>                               <tr id="section-1">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-1">&#182;</a>               </div>                            </td>             <td class="code">               <div class="highlight"><pre><span class="cm">/*!</span>
+<span class="cm"> * mustache.js - Logic-less {{mustache}} templates with JavaScript</span>
+<span class="cm"> * http://github.com/janl/mustache.js</span>
+<span class="cm"> */</span>
+<span class="kd">var</span> <span class="nx">Mustache</span> <span class="o">=</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">module</span> <span class="o">!==</span> <span class="s2">&quot;undefined&quot;</span> <span class="o">&amp;&amp;</span> <span class="nx">module</span><span class="p">.</span><span class="nx">exports</span><span class="p">)</span> <span class="o">||</span> <span class="p">{};</span>
+
+<span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">exports</span><span class="p">)</span> <span class="p">{</span>
+
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">name</span> <span class="o">=</span> <span class="s2">&quot;mustache.js&quot;</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">version</span> <span class="o">=</span> <span class="s2">&quot;0.5.1-dev&quot;</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">tags</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;{{&quot;</span><span class="p">,</span> <span class="s2">&quot;}}&quot;</span><span class="p">];</span>
+
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">parse</span> <span class="o">=</span> <span class="nx">parse</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">clearCache</span> <span class="o">=</span> <span class="nx">clearCache</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">compile</span> <span class="o">=</span> <span class="nx">compile</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">compilePartial</span> <span class="o">=</span> <span class="nx">compilePartial</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">render</span> <span class="o">=</span> <span class="nx">render</span><span class="p">;</span>
+
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">Scanner</span> <span class="o">=</span> <span class="nx">Scanner</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">Context</span> <span class="o">=</span> <span class="nx">Context</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">Renderer</span> <span class="o">=</span> <span class="nx">Renderer</span><span class="p">;</span></pre></div>             </td>           </tr>                               <tr id="section-2">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-2">&#182;</a>               </div>               <p>This is here for backwards compatibility with 0.4.x.</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nx">exports</span><span class="p">.</span><span class="nx">to_html</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">template</span><span class="p">,</span> <span class="nx">view</span><span class="p">,</span> <span class="nx">partials</span><span class="p">,</span> <span class="nx">send</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">render</span><span class="p">(</span><span class="nx">template</span><span class="p">,</span> <span class="nx">view</span><span class="p">,</span> <span class="nx">partials</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">send</span> <span class="o">===</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">send</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">};</span>
+
+  <span class="kd">var</span> <span class="nx">whiteRe</span> <span class="o">=</span> <span class="sr">/\s*/</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">spaceRe</span> <span class="o">=</span> <span class="sr">/\s+/</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">nonSpaceRe</span> <span class="o">=</span> <span class="sr">/\S/</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">eqRe</span> <span class="o">=</span> <span class="sr">/\s*=/</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">curlyRe</span> <span class="o">=</span> <span class="sr">/\s*\}/</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">tagRe</span> <span class="o">=</span> <span class="sr">/#|\^|\/|&gt;|\{|&amp;|=|!/</span><span class="p">;</span></pre></div>             </td>           </tr>                               <tr id="section-3">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-3">&#182;</a>               </div>               <p>Workaround for https://issues.apache.org/jira/browse/COUCHDB-577
+See https://github.com/janl/mustache.js/issues/189</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="kd">function</span> <span class="nx">testRe</span><span class="p">(</span><span class="nx">re</span><span class="p">,</span> <span class="nx">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nb">RegExp</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">test</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">re</span><span class="p">,</span> <span class="nx">string</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">isWhitespace</span><span class="p">(</span><span class="nx">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="o">!</span><span class="nx">testRe</span><span class="p">(</span><span class="nx">nonSpaceRe</span><span class="p">,</span> <span class="nx">string</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">var</span> <span class="nx">isArray</span> <span class="o">=</span> <span class="nb">Array</span><span class="p">.</span><span class="nx">isArray</span> <span class="o">||</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">toString</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">obj</span><span class="p">)</span> <span class="o">===</span> <span class="s2">&quot;[object Array]&quot;</span><span class="p">;</span>
+  <span class="p">};</span></pre></div>             </td>           </tr>                               <tr id="section-4">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-4">&#182;</a>               </div>               <p>OSWASP Guidlines: escape all non alphanumeric characters in ASCII space.</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="kd">var</span> <span class="nx">jsCharsRe</span> <span class="o">=</span> <span class="sr">/[\x00-\x2F\x3A-\x40\x5B-\x60\x7B-\xFF\u2028\u2029]/gm</span><span class="p">;</span>
+
+  <span class="kd">function</span> <span class="nx">quote</span><span class="p">(</span><span class="nx">text</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">escaped</span> <span class="o">=</span> <span class="nx">text</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="nx">jsCharsRe</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">c</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="s2">&quot;\\u&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;0000&#39;</span> <span class="o">+</span> <span class="nx">c</span><span class="p">.</span><span class="nx">charCodeAt</span><span class="p">(</span><span class="mi">0</span><span class="p">).</span><span class="nx">toString</span><span class="p">(</span><span class="mi">16</span><span class="p">)).</span><span class="nx">slice</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">);</span>
+    <span class="p">});</span>
+
+    <span class="k">return</span> <span class="s1">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="nx">escaped</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">escapeRe</span><span class="p">(</span><span class="nx">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">string</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/[-[\]{}()*+?.,\\^$|#\s]/g</span><span class="p">,</span> <span class="s2">&quot;\\$&amp;&quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">var</span> <span class="nx">entityMap</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;&amp;&quot;</span><span class="o">:</span> <span class="s2">&quot;&amp;amp;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;&lt;&quot;</span><span class="o">:</span> <span class="s2">&quot;&amp;lt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;&gt;&quot;</span><span class="o">:</span> <span class="s2">&quot;&amp;gt;&quot;</span><span class="p">,</span>
+    <span class="s1">&#39;&quot;&#39;</span><span class="o">:</span> <span class="s1">&#39;&amp;quot;&#39;</span><span class="p">,</span>
+    <span class="s2">&quot;&#39;&quot;</span><span class="o">:</span> <span class="s1">&#39;&amp;#39;&#39;</span><span class="p">,</span>
+    <span class="s2">&quot;/&quot;</span><span class="o">:</span> <span class="s1">&#39;&amp;#x2F;&#39;</span>
+  <span class="p">};</span>
+
+  <span class="kd">function</span> <span class="nx">escapeHtml</span><span class="p">(</span><span class="nx">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nb">String</span><span class="p">(</span><span class="nx">string</span><span class="p">).</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/[&amp;&lt;&gt;&quot;&#39;\/]/g</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">entityMap</span><span class="p">[</span><span class="nx">s</span><span class="p">];</span>
+    <span class="p">});</span>
+  <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-5">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-5">&#182;</a>               </div>               <p>Export these utility functions.</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="nx">exports</span><span class="p">.</span><span class="nx">isWhitespace</span> <span class="o">=</span> <span class="nx">isWhitespace</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">isArray</span> <span class="o">=</span> <span class="nx">isArray</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">quote</span> <span class="o">=</span> <span class="nx">quote</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">escapeRe</span> <span class="o">=</span> <span class="nx">escapeRe</span><span class="p">;</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">escapeHtml</span> <span class="o">=</span> <span class="nx">escapeHtml</span><span class="p">;</span>
+
+  <span class="kd">function</span> <span class="nx">Scanner</span><span class="p">(</span><span class="nx">string</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">string</span> <span class="o">=</span> <span class="nx">string</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">tail</span> <span class="o">=</span> <span class="nx">string</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Returns `true` if the tail is empty (end of string).</span>
+<span class="cm">   */</span>
+  <span class="nx">Scanner</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">eos</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span> <span class="o">===</span> <span class="s2">&quot;&quot;</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Tries to match the given regular expression at the current position.</span>
+<span class="cm">   * Returns the matched text if it can match, `null` otherwise.</span>
+<span class="cm">   */</span>
+  <span class="nx">Scanner</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">scan</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">re</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">match</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span><span class="p">.</span><span class="nx">match</span><span class="p">(</span><span class="nx">re</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">match</span> <span class="o">&amp;&amp;</span> <span class="nx">match</span><span class="p">.</span><span class="nx">index</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">tail</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="nx">match</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">length</span><span class="p">);</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">pos</span> <span class="o">+=</span> <span class="nx">match</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">length</span><span class="p">;</span>
+      <span class="k">return</span> <span class="nx">match</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="kc">null</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Skips all text until the given regular expression can be matched. Returns</span>
+<span class="cm">   * the skipped string, which is the entire tail of this scanner if no match</span>
+<span class="cm">   * can be made.</span>
+<span class="cm">   */</span>
+  <span class="nx">Scanner</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">scanUntil</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">re</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">match</span><span class="p">,</span> <span class="nx">pos</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span><span class="p">.</span><span class="nx">search</span><span class="p">(</span><span class="nx">re</span><span class="p">);</span>
+
+    <span class="k">switch</span> <span class="p">(</span><span class="nx">pos</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">-</span><span class="mi">1</span><span class="o">:</span>
+      <span class="nx">match</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span><span class="p">;</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">pos</span> <span class="o">+=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">tail</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">;</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="mi">0</span><span class="o">:</span>
+      <span class="nx">match</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="k">default</span><span class="o">:</span>
+      <span class="nx">match</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">pos</span><span class="p">);</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">tail</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">tail</span><span class="p">.</span><span class="nx">substring</span><span class="p">(</span><span class="nx">pos</span><span class="p">);</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">pos</span> <span class="o">+=</span> <span class="nx">pos</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">match</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="kd">function</span> <span class="nx">Context</span><span class="p">(</span><span class="nx">view</span><span class="p">,</span> <span class="nx">parent</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">view</span> <span class="o">=</span> <span class="nx">view</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">parent</span> <span class="o">=</span> <span class="nx">parent</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">clearCache</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="nx">Context</span><span class="p">.</span><span class="nx">make</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">view</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">(</span><span class="nx">view</span> <span class="k">instanceof</span> <span class="nx">Context</span><span class="p">)</span> <span class="o">?</span> <span class="nx">view</span> <span class="o">:</span> <span class="k">new</span> <span class="nx">Context</span><span class="p">(</span><span class="nx">view</span><span class="p">);</span>
+  <span class="p">};</span>
+
+  <span class="nx">Context</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">clearCache</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_cache</span> <span class="o">=</span> <span class="p">{};</span>
+  <span class="p">};</span>
+
+  <span class="nx">Context</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">push</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">view</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="k">new</span> <span class="nx">Context</span><span class="p">(</span><span class="nx">view</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">};</span>
+
+  <span class="nx">Context</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">lookup</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_cache</span><span class="p">[</span><span class="nx">name</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">name</span> <span class="o">===</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">value</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">view</span><span class="p">;</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">context</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="nx">name</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">names</span> <span class="o">=</span> <span class="nx">name</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">),</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+            <span class="nx">value</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">view</span><span class="p">;</span>
+
+            <span class="k">while</span> <span class="p">(</span><span class="nx">value</span> <span class="o">&amp;&amp;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">names</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+              <span class="nx">value</span> <span class="o">=</span> <span class="nx">value</span><span class="p">[</span><span class="nx">names</span><span class="p">[</span><span class="nx">i</span><span class="o">++</span><span class="p">]];</span>
+            <span class="p">}</span>
+          <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">value</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">view</span><span class="p">[</span><span class="nx">name</span><span class="p">];</span>
+          <span class="p">}</span>
+
+          <span class="k">if</span> <span class="p">(</span><span class="nx">value</span> <span class="o">!=</span> <span class="kc">null</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">break</span><span class="p">;</span>
+          <span class="p">}</span>
+
+          <span class="nx">context</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">parent</span><span class="p">;</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+
+      <span class="k">this</span><span class="p">.</span><span class="nx">_cache</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span> <span class="o">=</span> <span class="nx">value</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">value</span> <span class="o">===</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">value</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">view</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">value</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="kd">function</span> <span class="nx">Renderer</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">clearCache</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">clearCache</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_cache</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_partialCache</span> <span class="o">=</span> <span class="p">{};</span>
+  <span class="p">};</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">compile</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">tokens</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">fn</span> <span class="o">=</span> <span class="nx">compileTokens</span><span class="p">(</span><span class="nx">tokens</span><span class="p">),</span>
+        <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">view</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">Context</span><span class="p">.</span><span class="nx">make</span><span class="p">(</span><span class="nx">view</span><span class="p">),</span> <span class="nx">self</span><span class="p">);</span>
+    <span class="p">};</span>
+  <span class="p">};</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">compilePartial</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">tokens</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">_partialCache</span><span class="p">[</span><span class="nx">name</span><span class="p">]</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">compile</span><span class="p">(</span><span class="nx">tokens</span><span class="p">,</span> <span class="nx">tags</span><span class="p">);</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">_partialCache</span><span class="p">[</span><span class="nx">name</span><span class="p">];</span>
+  <span class="p">};</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">render</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">template</span><span class="p">,</span> <span class="nx">view</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">fn</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_cache</span><span class="p">[</span><span class="nx">template</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">fn</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">compile</span><span class="p">(</span><span class="nx">template</span><span class="p">);</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">_cache</span><span class="p">[</span><span class="nx">template</span><span class="p">]</span> <span class="o">=</span> <span class="nx">fn</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">view</span><span class="p">);</span>
+  <span class="p">};</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">_section</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">context</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">value</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">lookup</span><span class="p">(</span><span class="nx">name</span><span class="p">);</span>
+
+    <span class="k">switch</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="s2">&quot;object&quot;</span><span class="o">:</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">value</span><span class="p">))</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">buffer</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">len</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">len</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">buffer</span> <span class="o">+=</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">value</span><span class="p">[</span><span class="nx">i</span><span class="p">]),</span> <span class="k">this</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">buffer</span><span class="p">;</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">value</span><span class="p">),</span> <span class="k">this</span><span class="p">);</span>
+      <span class="p">}</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="s2">&quot;function&quot;</span><span class="o">:</span>
+      <span class="kd">var</span> <span class="nx">sectionText</span> <span class="o">=</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span> <span class="k">this</span><span class="p">),</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
+      <span class="kd">var</span> <span class="nx">scopedRender</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">template</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">self</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">template</span><span class="p">,</span> <span class="nx">context</span><span class="p">);</span>
+      <span class="p">};</span>
+      <span class="k">return</span> <span class="nx">value</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">view</span><span class="p">,</span> <span class="nx">sectionText</span><span class="p">,</span> <span class="nx">scopedRender</span><span class="p">)</span> <span class="o">||</span> <span class="s2">&quot;&quot;</span><span class="p">;</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="k">default</span><span class="o">:</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">_inverted</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">context</span><span class="p">,</span> <span class="nx">callback</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">value</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">lookup</span><span class="p">(</span><span class="nx">name</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-6">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-6">&#182;</a>               </div>               <p>From the spec: inverted sections may render text once based on the
+inverse value of the key. That is, they will be rendered if the key
+doesn't exist, is false, or is an empty list.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">if</span> <span class="p">(</span><span class="nx">value</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="nx">value</span> <span class="o">===</span> <span class="kc">false</span> <span class="o">||</span> <span class="p">(</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nx">value</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">callback</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">_partial</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">context</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">fn</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">_partialCache</span><span class="p">[</span><span class="nx">name</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">fn</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">fn</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="nx">Renderer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">_name</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">context</span><span class="p">,</span> <span class="nx">escape</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">value</span> <span class="o">=</span> <span class="nx">context</span><span class="p">.</span><span class="nx">lookup</span><span class="p">(</span><span class="nx">name</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">value</span> <span class="o">===</span> <span class="s2">&quot;function&quot;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">value</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">view</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">string</span> <span class="o">=</span> <span class="p">(</span><span class="nx">value</span> <span class="o">==</span> <span class="kc">null</span><span class="p">)</span> <span class="o">?</span> <span class="s2">&quot;&quot;</span> <span class="o">:</span> <span class="nb">String</span><span class="p">(</span><span class="nx">value</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">escape</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">escapeHtml</span><span class="p">(</span><span class="nx">string</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">string</span><span class="p">;</span>
+  <span class="p">};</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Low-level function that compiles the given `tokens` into a</span>
+<span class="cm">   * function that accepts two arguments: a Context and a</span>
+<span class="cm">   * Renderer. Returns the body of the function as a string if</span>
+<span class="cm">   * `returnBody` is true.</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">compileTokens</span><span class="p">(</span><span class="nx">tokens</span><span class="p">,</span> <span class="nx">returnBody</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">tokens</span> <span class="o">===</span> <span class="s2">&quot;string&quot;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">tokens</span> <span class="o">=</span> <span class="nx">parse</span><span class="p">(</span><span class="nx">tokens</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">body</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&quot;&quot;&#39;</span><span class="p">];</span>
+    <span class="kd">var</span> <span class="nx">token</span><span class="p">,</span> <span class="nx">method</span><span class="p">,</span> <span class="nx">escape</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">len</span> <span class="o">=</span> <span class="nx">tokens</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">len</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">token</span> <span class="o">=</span> <span class="nx">tokens</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+
+      <span class="k">switch</span> <span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">case</span> <span class="s2">&quot;#&quot;</span><span class="o">:</span>
+      <span class="k">case</span> <span class="s2">&quot;^&quot;</span><span class="o">:</span>
+        <span class="nx">method</span> <span class="o">=</span> <span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;#&quot;</span><span class="p">)</span> <span class="o">?</span> <span class="s2">&quot;_section&quot;</span> <span class="o">:</span> <span class="s2">&quot;_inverted&quot;</span><span class="p">;</span>
+        <span class="nx">body</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s2">&quot;r.&quot;</span> <span class="o">+</span> <span class="nx">method</span> <span class="o">+</span> <span class="s2">&quot;(&quot;</span> <span class="o">+</span> <span class="nx">quote</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;, c, function (c, r) {\n&quot;</span> <span class="o">+</span>
+          <span class="s2">&quot;  &quot;</span> <span class="o">+</span> <span class="nx">compileTokens</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">tokens</span><span class="p">,</span> <span class="kc">true</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;\n&quot;</span> <span class="o">+</span>
+          <span class="s2">&quot;})&quot;</span><span class="p">);</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="k">case</span> <span class="s2">&quot;{&quot;</span><span class="o">:</span>
+      <span class="k">case</span> <span class="s2">&quot;&amp;&quot;</span><span class="o">:</span>
+      <span class="k">case</span> <span class="s2">&quot;name&quot;</span><span class="o">:</span>
+        <span class="nx">escape</span> <span class="o">=</span> <span class="nx">token</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;name&quot;</span> <span class="o">?</span> <span class="s2">&quot;true&quot;</span> <span class="o">:</span> <span class="s2">&quot;false&quot;</span><span class="p">;</span>
+        <span class="nx">body</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s2">&quot;r._name(&quot;</span> <span class="o">+</span> <span class="nx">quote</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;, c, &quot;</span> <span class="o">+</span> <span class="nx">escape</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span><span class="p">);</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="k">case</span> <span class="s2">&quot;&gt;&quot;</span><span class="o">:</span>
+        <span class="nx">body</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="s2">&quot;r._partial(&quot;</span> <span class="o">+</span> <span class="nx">quote</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;, c)&quot;</span><span class="p">);</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="k">case</span> <span class="s2">&quot;text&quot;</span><span class="o">:</span>
+        <span class="nx">body</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">quote</span><span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">));</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-7">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-7">&#182;</a>               </div>               <p>Convert to a string body.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="nx">body</span> <span class="o">=</span> <span class="s2">&quot;return &quot;</span> <span class="o">+</span> <span class="nx">body</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="s2">&quot; + &quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;;&quot;</span><span class="p">;</span></pre></div>             </td>           </tr>                               <tr id="section-8">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-8">&#182;</a>               </div>               <p>Good for debugging.
+console.log(body);</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">if</span> <span class="p">(</span><span class="nx">returnBody</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">body</span><span class="p">;</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-9">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-9">&#182;</a>               </div>               <p>For great evil!</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="k">return</span> <span class="k">new</span> <span class="nb">Function</span><span class="p">(</span><span class="s2">&quot;c, r&quot;</span><span class="p">,</span> <span class="nx">body</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">function</span> <span class="nx">escapeTags</span><span class="p">(</span><span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">tags</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="p">[</span>
+        <span class="k">new</span> <span class="nb">RegExp</span><span class="p">(</span><span class="nx">escapeRe</span><span class="p">(</span><span class="nx">tags</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;\\s*&quot;</span><span class="p">),</span>
+        <span class="k">new</span> <span class="nb">RegExp</span><span class="p">(</span><span class="s2">&quot;\\s*&quot;</span> <span class="o">+</span> <span class="nx">escapeRe</span><span class="p">(</span><span class="nx">tags</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+      <span class="p">];</span>
+    <span class="p">}</span>
+
+    <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">&quot;Invalid tags: &quot;</span> <span class="o">+</span> <span class="nx">tags</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">));</span>
+  <span class="p">}</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Forms the given linear array of `tokens` into a nested tree structure</span>
+<span class="cm">   * where tokens that represent a section have a &quot;tokens&quot; array property</span>
+<span class="cm">   * that contains all tokens that are in that section.</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">nestTokens</span><span class="p">(</span><span class="nx">tokens</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">tree</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="kd">var</span> <span class="nx">collector</span> <span class="o">=</span> <span class="nx">tree</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">sections</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="kd">var</span> <span class="nx">token</span><span class="p">,</span> <span class="nx">section</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">tokens</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">token</span> <span class="o">=</span> <span class="nx">tokens</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+
+      <span class="k">switch</span> <span class="p">(</span><span class="nx">token</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">case</span> <span class="s2">&quot;#&quot;</span><span class="o">:</span>
+      <span class="k">case</span> <span class="s2">&quot;^&quot;</span><span class="o">:</span>
+        <span class="nx">token</span><span class="p">.</span><span class="nx">tokens</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="nx">sections</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">token</span><span class="p">);</span>
+        <span class="nx">collector</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">token</span><span class="p">);</span>
+        <span class="nx">collector</span> <span class="o">=</span> <span class="nx">token</span><span class="p">.</span><span class="nx">tokens</span><span class="p">;</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="k">case</span> <span class="s2">&quot;/&quot;</span><span class="o">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">sections</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">&quot;Unopened section: &quot;</span> <span class="o">+</span> <span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="nx">section</span> <span class="o">=</span> <span class="nx">sections</span><span class="p">.</span><span class="nx">pop</span><span class="p">();</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">section</span><span class="p">.</span><span class="nx">value</span> <span class="o">!==</span> <span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">&quot;Unclosed section: &quot;</span> <span class="o">+</span> <span class="nx">section</span><span class="p">.</span><span class="nx">value</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nx">sections</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">collector</span> <span class="o">=</span> <span class="nx">sections</span><span class="p">[</span><span class="nx">sections</span><span class="p">.</span><span class="nx">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">].</span><span class="nx">tokens</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+          <span class="nx">collector</span> <span class="o">=</span> <span class="nx">tree</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="k">default</span><span class="o">:</span>
+        <span class="nx">collector</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">token</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-10">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-10">&#182;</a>               </div>               <p>Make sure there were no open sections when we're done.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="nx">section</span> <span class="o">=</span> <span class="nx">sections</span><span class="p">.</span><span class="nx">pop</span><span class="p">();</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">section</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">&quot;Unclosed section: &quot;</span> <span class="o">+</span> <span class="nx">section</span><span class="p">.</span><span class="nx">value</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">tree</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Combines the values of consecutive text tokens in the given `tokens` array</span>
+<span class="cm">   * to a single token.</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">squashTokens</span><span class="p">(</span><span class="nx">tokens</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">lastToken</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">tokens</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">tokens</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="nx">lastToken</span> <span class="o">&amp;&amp;</span> <span class="nx">lastToken</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;text&quot;</span> <span class="o">&amp;&amp;</span> <span class="nx">token</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;text&quot;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">lastToken</span><span class="p">.</span><span class="nx">value</span> <span class="o">+=</span> <span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">;</span>
+        <span class="nx">tokens</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">i</span><span class="o">--</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span> <span class="c1">// Remove this token from the array.</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">lastToken</span> <span class="o">=</span> <span class="nx">token</span><span class="p">;</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Breaks up the given `template` string into a tree of token objects. If</span>
+<span class="cm">   * `tags` is given here it must be an array with two string values: the</span>
+<span class="cm">   * opening and closing tags used in the template (e.g. [&quot;&lt;%&quot;, &quot;%&gt;&quot;]). Of</span>
+<span class="cm">   * course, the default is to use mustaches (i.e. Mustache.tags).</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">parse</span><span class="p">(</span><span class="nx">template</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">tags</span> <span class="o">=</span> <span class="nx">tags</span> <span class="o">||</span> <span class="nx">exports</span><span class="p">.</span><span class="nx">tags</span><span class="p">;</span>
+    <span class="kd">var</span> <span class="nx">tagRes</span> <span class="o">=</span> <span class="nx">escapeTags</span><span class="p">(</span><span class="nx">tags</span><span class="p">);</span>
+
+    <span class="kd">var</span> <span class="nx">scanner</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Scanner</span><span class="p">(</span><span class="nx">template</span><span class="p">);</span>
+
+    <span class="kd">var</span> <span class="nx">tokens</span> <span class="o">=</span> <span class="p">[],</span>      <span class="c1">// Buffer to hold the tokens</span>
+        <span class="nx">spaces</span> <span class="o">=</span> <span class="p">[],</span>      <span class="c1">// Indices of whitespace tokens on the current line</span>
+        <span class="nx">hasTag</span> <span class="o">=</span> <span class="kc">false</span><span class="p">,</span>   <span class="c1">// Is there a {{tag}} on the current line?</span>
+        <span class="nx">nonSpace</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span> <span class="c1">// Is there a non-space char on the current line?</span></pre></div>             </td>           </tr>                               <tr id="section-11">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-11">&#182;</a>               </div>               <p>Strips all whitespace tokens array for the current line
+if there was a {{#tag}} on it and otherwise only space.</p>             </td>             <td class="code">               <div class="highlight"><pre>    <span class="kd">var</span> <span class="nx">stripSpace</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">hasTag</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nx">nonSpace</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">while</span> <span class="p">(</span><span class="nx">spaces</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">tokens</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">spaces</span><span class="p">.</span><span class="nx">pop</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">spaces</span> <span class="o">=</span> <span class="p">[];</span>
+      <span class="p">}</span>
+
+      <span class="nx">hasTag</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+      <span class="nx">nonSpace</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+    <span class="p">};</span>
+
+    <span class="kd">var</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">chr</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="nx">scanner</span><span class="p">.</span><span class="nx">eos</span><span class="p">())</span> <span class="p">{</span>
+      <span class="nx">value</span> <span class="o">=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nx">scanUntil</span><span class="p">(</span><span class="nx">tagRes</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">len</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">len</span><span class="p">;</span> <span class="o">++</span><span class="nx">i</span><span class="p">)</span> <span class="p">{</span>
+          <span class="nx">chr</span> <span class="o">=</span> <span class="nx">value</span><span class="p">[</span><span class="nx">i</span><span class="p">];</span>
+
+          <span class="k">if</span> <span class="p">(</span><span class="nx">isWhitespace</span><span class="p">(</span><span class="nx">chr</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">spaces</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">tokens</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+          <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="nx">nonSpace</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+          <span class="p">}</span>
+
+          <span class="nx">tokens</span><span class="p">.</span><span class="nx">push</span><span class="p">({</span><span class="nx">type</span><span class="o">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">chr</span><span class="p">});</span>
+
+          <span class="k">if</span> <span class="p">(</span><span class="nx">chr</span> <span class="o">===</span> <span class="s2">&quot;\n&quot;</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">stripSpace</span><span class="p">();</span> <span class="c1">// Check for whitespace on the current line.</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-12">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-12">&#182;</a>               </div>               <p>Match the opening tag.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">scanner</span><span class="p">.</span><span class="nx">scan</span><span class="p">(</span><span class="nx">tagRes</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="p">{</span>
+        <span class="k">break</span><span class="p">;</span>
+      <span class="p">}</span>
+
+      <span class="nx">hasTag</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+      <span class="nx">type</span> <span class="o">=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nx">scan</span><span class="p">(</span><span class="nx">tagRe</span><span class="p">)</span> <span class="o">||</span> <span class="s2">&quot;name&quot;</span><span class="p">;</span></pre></div>             </td>           </tr>                               <tr id="section-13">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-13">&#182;</a>               </div>               <p>Skip any whitespace between tag and value.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="nx">scanner</span><span class="p">.</span><span class="nx">scan</span><span class="p">(</span><span class="nx">whiteRe</span><span class="p">);</span></pre></div>             </td>           </tr>                               <tr id="section-14">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-14">&#182;</a>               </div>               <p>Extract the tag value.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;=&quot;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">value</span> <span class="o">=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nx">scanUntil</span><span class="p">(</span><span class="nx">eqRe</span><span class="p">);</span>
+        <span class="nx">scanner</span><span class="p">.</span><span class="nx">scan</span><span class="p">(</span><span class="nx">eqRe</span><span class="p">);</span>
+        <span class="nx">scanner</span><span class="p">.</span><span class="nx">scanUntil</span><span class="p">(</span><span class="nx">tagRes</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;{&quot;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">closeRe</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">RegExp</span><span class="p">(</span><span class="s2">&quot;\\s*&quot;</span> <span class="o">+</span> <span class="nx">escapeRe</span><span class="p">(</span><span class="s2">&quot;}&quot;</span> <span class="o">+</span> <span class="nx">tags</span><span class="p">[</span><span class="mi">1</span><span class="p">]));</span>
+        <span class="nx">value</span> <span class="o">=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nx">scanUntil</span><span class="p">(</span><span class="nx">closeRe</span><span class="p">);</span>
+        <span class="nx">scanner</span><span class="p">.</span><span class="nx">scan</span><span class="p">(</span><span class="nx">curlyRe</span><span class="p">);</span>
+        <span class="nx">scanner</span><span class="p">.</span><span class="nx">scanUntil</span><span class="p">(</span><span class="nx">tagRes</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">value</span> <span class="o">=</span> <span class="nx">scanner</span><span class="p">.</span><span class="nx">scanUntil</span><span class="p">(</span><span class="nx">tagRes</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+      <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-15">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-15">&#182;</a>               </div>               <p>Match the closing tag.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">scanner</span><span class="p">.</span><span class="nx">scan</span><span class="p">(</span><span class="nx">tagRes</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="p">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="s2">&quot;Unclosed tag at &quot;</span> <span class="o">+</span> <span class="nx">scanner</span><span class="p">.</span><span class="nx">pos</span><span class="p">);</span>
+      <span class="p">}</span>
+
+      <span class="nx">tokens</span><span class="p">.</span><span class="nx">push</span><span class="p">({</span><span class="nx">type</span><span class="o">:</span> <span class="nx">type</span><span class="p">,</span> <span class="nx">value</span><span class="o">:</span> <span class="nx">value</span><span class="p">});</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;name&quot;</span> <span class="o">||</span> <span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;{&quot;</span> <span class="o">||</span> <span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;&amp;&quot;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">nonSpace</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+      <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-16">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-16">&#182;</a>               </div>               <p>Set the tags for the next time around.</p>             </td>             <td class="code">               <div class="highlight"><pre>      <span class="k">if</span> <span class="p">(</span><span class="nx">type</span> <span class="o">===</span> <span class="s2">&quot;=&quot;</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">tags</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">split</span><span class="p">(</span><span class="nx">spaceRe</span><span class="p">);</span>
+        <span class="nx">tagRes</span> <span class="o">=</span> <span class="nx">escapeTags</span><span class="p">(</span><span class="nx">tags</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="nx">squashTokens</span><span class="p">(</span><span class="nx">tokens</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="nx">nestTokens</span><span class="p">(</span><span class="nx">tokens</span><span class="p">);</span>
+  <span class="p">}</span></pre></div>             </td>           </tr>                               <tr id="section-17">             <td class="docs">               <div class="pilwrap">                 <a class="pilcrow" href="#section-17">&#182;</a>               </div>               <p>The high-level clearCache, compile, compilePartial, and render functions
+use this default renderer.</p>             </td>             <td class="code">               <div class="highlight"><pre>  <span class="kd">var</span> <span class="nx">_renderer</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Renderer</span><span class="p">;</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * Clears all cached templates and partials.</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">clearCache</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">_renderer</span><span class="p">.</span><span class="nx">clearCache</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * High-level API for compiling the given `tokens` down to a reusable</span>
+<span class="cm">   * function. If `tokens` is a string it will be parsed using the given `tags`</span>
+<span class="cm">   * before it is compiled.</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">compile</span><span class="p">(</span><span class="nx">tokens</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">_renderer</span><span class="p">.</span><span class="nx">compile</span><span class="p">(</span><span class="nx">tokens</span><span class="p">,</span> <span class="nx">tags</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * High-level API for compiling the `tokens` for the partial with the given</span>
+<span class="cm">   * `name` down to a reusable function. If `tokens` is a string it will be</span>
+<span class="cm">   * parsed using the given `tags` before it is compiled.</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">compilePartial</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">tokens</span><span class="p">,</span> <span class="nx">tags</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">_renderer</span><span class="p">.</span><span class="nx">compilePartial</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">tokens</span><span class="p">,</span> <span class="nx">tags</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="cm">/**</span>
+<span class="cm">   * High-level API for rendering the `template` using the given `view`. The</span>
+<span class="cm">   * optional `partials` object may be given here for convenience, but note that</span>
+<span class="cm">   * it will cause all partials to be re-compiled, thus hurting performance. Of</span>
+<span class="cm">   * course, this only matters if you&#39;re going to render the same template more</span>
+<span class="cm">   * than once. If so, it is best to call `compilePartial` before calling this</span>
+<span class="cm">   * function and to leave the `partials` argument blank.</span>
+<span class="cm">   */</span>
+  <span class="kd">function</span> <span class="nx">render</span><span class="p">(</span><span class="nx">template</span><span class="p">,</span> <span class="nx">view</span><span class="p">,</span> <span class="nx">partials</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">partials</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">name</span> <span class="k">in</span> <span class="nx">partials</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">compilePartial</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">partials</span><span class="p">[</span><span class="nx">name</span><span class="p">]);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">_renderer</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">template</span><span class="p">,</span> <span class="nx">view</span><span class="p">);</span>
+  <span class="p">}</span>
+
+<span class="p">})(</span><span class="nx">Mustache</span><span class="p">);</span>
+
+</pre></div>             </td>           </tr>                </tbody>     </table>   </div> </body> </html> 
