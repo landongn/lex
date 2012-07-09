@@ -6,7 +6,7 @@ razor.extend('pipeline', {
 	lines: 300, //vertically, how many lines we will be controlling
 	write_queue: [], //FIFO queue for incoming lines of text
 
-	defaultColor: '#000',
+	defaultColor: '#ffffff',
 	defaultFont: '18pt Ubuntu Mono',
 	queue: function(line){
 		razor.pipeline.write_queue.push(line);
@@ -58,14 +58,14 @@ razor.extend('pipeline', {
 					//Finally, write the line into the canvas at the bottom.
 					console.log('writing line', currentLine);
 					razor.canvas.ctx.font = razor.pipeline.defaultFont;
-					razor.canvas.ctx.color = razor.pipeline.defaultColor;
+					razor.canvas.ctx.fillStyle = razor.pipeline.defaultColor;
 					razor.canvas.ctx.fillText(currentLine, 30, 100);
 				}, razor.pipeline.interval);
 			} else {
 				//Finally, write the line into the canvas at the bottom.
 				console.log('writing line', currentLine);
 				razor.canvas.ctx.font = razor.pipeline.defaultFont;
-				razor.canvas.ctx.color = razor.pipeline.defaultColor;
+				razor.canvas.ctx.fillStyle = razor.pipeline.defaultColor;
 				razor.canvas.ctx.fillText(currentLine, 30, 100);
 			}
 		}
