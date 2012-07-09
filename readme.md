@@ -21,3 +21,15 @@ razor.extend('module', {
 ```
 
 for another more involved example, check out the ./samples/basic_modules/modules.html file.  Note though; the module doesn't really do anything amazing, just gives you some examples of working between modules.
+
+Lex is built with grunt.js; so there is a slight requirement to have nodejs installed.
+
+building Lex is cake:
+
+```
+$ grunt lint
+$ grunt concat
+$ grunt min
+```
+
+check /dist/razor.js or the minified version as /dist/rzr.js
