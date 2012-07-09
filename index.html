@@ -49,6 +49,8 @@
 <p>Using lex is easy.  The default namespace is called <pre>razor</pre> and you extend out of that namespace by calling <pre>razor.extend('namespace', {});</pre></p>
 
 <p>EventEmitter is available for use in the <pre>razor.event</pre> namespace.  This allows you to write apps that use the observer pattern really easily.  New events that you want to emit works by just calling <pre>razor.event.emit('name', {});</pre></p>
+
+<p>Mustache is configured as the default templating system.  Calling <pre>razor.render(template, data)</pre> will execute a template and it's context data and return the markup as evaluated.</p>
       </section>
 
     </div>
