@@ -40,11 +40,15 @@
 
         <h3>Howdy.</h3>
 
-<p>Lex is a javascript microframework.  You could almost call it a pattern, more that a framework.</p>
+<p>Lex is a javascript microframework.  You could almost call it a pattern, more than a framework.</p>
 
 <p>It allows for a very terse, simple namespace abstraction, and some minor conveniences (bundled with EventEmitter, Mustache Templates, some functional goodies) that allow you to iterate fast, loosely coupled and elegant javascript apps.</p>
 
 <p>Included is a single sample that shows you how to get started.  Try it out in the ./samples/basic_modules/ directory.</p>
+
+<p>Using lex is easy.  The default namespace is called <pre>razor</pre> and you extend out of that namespace by calling <pre>razor.extend('namespace', {});</pre></p>
+
+<p>EventEmitter is available for use in the <pre>razor.event</pre> namespace.  This allows you to write apps that use the observer pattern really easily.  New events that you want to emit works by just calling <pre>razor.event.emit('name', {});</pre></p>
       </section>
 
     </div>
